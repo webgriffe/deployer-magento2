@@ -13,6 +13,18 @@ task('magento:deploy:assets', function () {
     run('{{bin/php}} {{release_path}}/bin/magento setup:static-content:deploy {{assets_locales}}');
 });
 
+desc('Clear OPCache cache');
+task('deploy:resetOPCache', function() {
+    $resetScriptFilename = "resetOPCache.php";
+    $moveToReleaseFolder = "cd {{release_path}}";
+    $resetScriptContent = '<?php echo opcache_reset() ? "Successfully reset opcache" : "Something went wrong trying to reset opcache"; ?>';
+    $createResetScript = "echo '$resetScriptContent' > $resetScriptFilename";
+    $executeResetScript= "curl {{base_url}}/$resetScriptFilename";
+    $removeResetScript = "rm $resetScriptFilename";
+
+    run("$moveToReleaseFolder && $createResetScript && $executeResetScript && $removeResetScript");
+});
+
 desc('Magento2 deployment operations');
 task('deploy:magento', [
     'magento:enable',
@@ -46,6 +58,7 @@ task('deploy', [
     'deploy:magento',
     'deploy:symlink',
     'deploy:unlock',
+    'deploy:resetOPCache',
     'cleanup',
     'success'
 ]);
@@ -63,6 +76,7 @@ task('deploy:maintenance', [
     'deploy:magento-maintenance',
     'deploy:symlink',
     'deploy:unlock',
+    'deploy:resetOPCache',
     'cleanup',
     'success'
 ]);

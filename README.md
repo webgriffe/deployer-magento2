@@ -33,6 +33,16 @@ This recipe overrides some tasks of the original Deployer Magento2 recipe:
     ```php
     set('assets_locales', 'en_GB en_US it_IT'); 
     ```
+* The task `deploy:resetOPCache` called inside `deploy` and `deploy:maintenance` uses variable base_url that you can define in your deploy.php file like this:
+     ```php
+     server('staging', 'my.server.com')
+         ->user('myUser')
+         ->set('deploy_path', '/path/to/public_html')
+         ->set('http_user', 'myUser')
+         ->set('http_group', 'myGroup')
+         ->set('base_url', 'http://myBaseUrl.com/')
+         ->stage('staging');
+     ```
 It also adds the `magento:first-deploy` task which is useful when depoying a project for the first time (when Magento is not installed).
 
 Magento useful tasks
