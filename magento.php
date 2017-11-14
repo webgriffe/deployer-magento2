@@ -8,9 +8,17 @@ use Symfony\Component\Console\Input\InputOption;
 require 'recipe/magento2.php';
 
 // Tasks
+set('deploy_mode', 'production');
+desc('Set Magento deploy mode');
+task('magento:mode:set', function () {
+    run('{{bin/php}} {{release_path}}/bin/magento deploy:mode:set -s {{deploy_mode}}');
+});
+
 desc('Deploy assets');
 task('magento:deploy:assets', function () {
-    run('{{bin/php}} {{release_path}}/bin/magento setup:static-content:deploy {{assets_locales}}');
+    if (get('deploy_mode') === 'production') {
+        run('{{bin/php}} {{release_path}}/bin/magento setup:static-content:deploy {{assets_locales}}');
+    }
 });
 
 desc('Clear OPCache cache');
@@ -28,6 +36,7 @@ task('deploy:resetOPCache', function() {
 desc('Magento2 deployment operations');
 task('deploy:magento', [
     'magento:enable',
+    'magento:mode:set',
     'magento:compile',
     'magento:deploy:assets',
     'magento:upgrade:db',
@@ -37,6 +46,7 @@ task('deploy:magento', [
 desc('Magento2 deployment operations');
 task('deploy:magento-maintenance', [
     'magento:enable',
+    'magento:mode:set',
     'magento:compile',
     'magento:deploy:assets',
     'magento:maintenance:enable',
