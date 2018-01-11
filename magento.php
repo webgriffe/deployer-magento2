@@ -36,6 +36,7 @@ task('deploy:resetOPCache', function() {
 desc('Magento2 deployment operations');
 task('deploy:magento', [
     'magento:enable',
+    'magento:module:disable',
     'magento:mode:set',
     'magento:compile',
     'magento:deploy:assets',
@@ -46,6 +47,7 @@ task('deploy:magento', [
 desc('Magento2 deployment operations');
 task('deploy:magento-maintenance', [
     'magento:enable',
+    'magento:module:disable',
     'magento:mode:set',
     'magento:compile',
     'magento:deploy:assets',
@@ -188,4 +190,14 @@ task('magento:media-pull', function () {
         'rsync -arvuzi '.$excludeDirsParameter.' -e "'.$sshCommand.'" '.$username . $hostname.':'.$remotePath.' pub/media/',
         $timeout
     );
+});
+
+set('modules_to_disable', []);
+desc('Disable modules');
+task('magento:module:disable', function () {
+    $modulesToDisable = get('modules_to_disable');
+    if (empty($modulesToDisable)) {
+        return;
+    }
+    run('{{bin/php}} {{release_path}}/bin/magento module:disable ' . implode(' ', $modulesToDisable));
 });
