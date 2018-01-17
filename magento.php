@@ -7,7 +7,10 @@ use Symfony\Component\Console\Input\InputOption;
 
 require 'recipe/magento2.php';
 
-// Rewriting shared_dirs of parent recipe to make the whole var directory shared
+// Rewriting shared_dirs and shared_files of parent recipe to make the whole var directory shared
+set('shared_files', [
+    'app/etc/env.php',
+]);
 set('shared_dirs', [
     'var',
     'pub/media',
