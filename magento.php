@@ -7,6 +7,12 @@ use Symfony\Component\Console\Input\InputOption;
 
 require 'recipe/magento2.php';
 
+// Rewriting shared_dirs of parent recipe to make the whole var directory shared
+set('shared_dirs', [
+    'var',
+    'pub/media',
+]);
+
 // Tasks
 set('deploy_mode', 'production');
 desc('Set Magento deploy mode');
