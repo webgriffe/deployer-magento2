@@ -36,7 +36,7 @@ task('deploy:resetOPCache', function() {
     $moveToReleaseFolder = "cd {{release_path}}";
     $resetScriptContent = '<?php echo opcache_reset() ? "Successfully reset opcache" : "Something went wrong trying to reset opcache"; ?>';
     $createResetScript = "echo '$resetScriptContent' > $resetScriptFilename";
-    $executeResetScript= "curl {{base_url}}/$resetScriptFilename";
+    $executeResetScript= "curl -k {{base_url}}/$resetScriptFilename";
     $removeResetScript = "rm $resetScriptFilename";
 
     run("$moveToReleaseFolder && $createResetScript && $executeResetScript && $removeResetScript");
