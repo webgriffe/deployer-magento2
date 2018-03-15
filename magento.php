@@ -5,6 +5,8 @@ namespace Deployer;
 use Deployer\Task\Context;
 use Symfony\Component\Console\Input\InputOption;
 
+// TODO Add deployer version check (now it works only with Deployer >= 5.0)
+
 require 'recipe/magento2.php';
 
 // Rewriting shared_dirs and shared_files of parent recipe to make the whole var directory shared
@@ -134,7 +136,7 @@ task('magento:db-pull', function () {
     $remoteDump = "/tmp/{$fileName}.sql.gz";
     run('cd {{current_path}} && n98-magerun2.phar db:dump -n -c gz ' . $remoteDump);
     $localDump =  tempnam(sys_get_temp_dir(), 'deployer_') . '.sql.gz';
-    download($localDump, $remoteDump);
+    download($remoteDump, $localDump);
     runLocally('n98-magerun2.phar db:import -n -c gz ' . $localDump);
     runLocally('n98-magerun2.phar cache:disable layout block_html full_page');
 });
@@ -150,55 +152,23 @@ option(
 );
 desc('Pull Magento media to local');
 task('magento:media-pull', function () {
-    $serverConfig = Context::get()->getServer()->getConfiguration();
-    $sshOptions = [
-        '-A',
-        '-o UserKnownHostsFile=/dev/null',
-        '-o StrictHostKeyChecking=no'
-    ];
-
-
-    $username = $serverConfig->getUser() ? $serverConfig->getUser() : null;
-    if (!empty($username)) {
-        $username .= '@';
-    }
-    $hostname = $serverConfig->getHost();
-
-    if ($serverConfig->getConfigFile()) {
-        $sshOptions[] = '-F ' . escapeshellarg($serverConfig->getConfigFile());
-    }
-
-    if ($serverConfig->getPort()) {
-        $sshOptions[] = '-p ' . escapeshellarg($serverConfig->getPort());
-    }
-
-    if ($serverConfig->getPrivateKey()) {
-        $sshOptions[] = '-i ' . escapeshellarg($serverConfig->getPrivateKey());
-    } elseif ($serverConfig->getPemFile()) {
-        $sshOptions[] = '-i ' . escapeshellarg($serverConfig->getPemFile());
-    }
-
-    if ($serverConfig->getPty()) {
-        $sshOptions[] = '-t';
-    }
-
-    $sshCommand = 'ssh ' . implode(' ', $sshOptions);
     $remotePath = '{{current_path}}/pub/media/';
+    $localPath = 'pub/media/';
 
     $excludeDirs = array_map(function($dir) {
         return '--exclude '.$dir;
     }, get('media_pull_exclude_dirs'));
-    $excludeDirsParameter = implode(' ', $excludeDirs);
 
     $timeout = 300;
     if (input()->hasOption('media-pull-timeout')) {
         $timeout = input()->getOption('media-pull-timeout');
     }
+    $config = [
+        'options' => $excludeDirs,
+        'timeout' => $timeout
+    ];
 
-    runLocally(
-        'rsync -arvuzi '.$excludeDirsParameter.' -e "'.$sshCommand.'" '.$username . $hostname.':'.$remotePath.' pub/media/',
-        $timeout
-    );
+    download($remotePath, $localPath, $config);
 });
 
 set('modules_to_disable', []);
