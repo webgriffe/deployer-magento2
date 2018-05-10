@@ -50,8 +50,8 @@ task('deploy:magento', [
     'magento:module:disable',
     'magento:mode:set',
     'magento:compile',
-    'magento:deploy:assets',
     'magento:upgrade:db',
+    'magento:deploy:assets',
     'magento:cache:flush',
 ]);
 
@@ -61,9 +61,9 @@ task('deploy:magento-maintenance', [
     'magento:module:disable',
     'magento:mode:set',
     'magento:compile',
-    'magento:deploy:assets',
     'magento:maintenance:enable',
     'magento:upgrade:db',
+    'magento:deploy:assets',
     'magento:cache:flush',
     'magento:maintenance:disable'
 ]);
