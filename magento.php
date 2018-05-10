@@ -9,9 +9,11 @@ use Symfony\Component\Console\Input\InputOption;
 
 require 'recipe/magento2.php';
 
-// Rewriting shared_dirs of parent recipe to make the whole var directory shared
+// Rewriting shared_dirs of parent recipe to make the make var/log and var/session shared, too
 set('shared_dirs', [
-    'var',
+    'var/log',
+    'var/session',
+    'var/backup',
     'pub/media',
 ]);
 
