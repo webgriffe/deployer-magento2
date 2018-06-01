@@ -18,6 +18,9 @@ set('shared_dirs', [
     'pub/media',
 ]);
 
+// DB pull strip tables
+set('db_pull_strip_tables', []);
+
 // Tasks
 set('deploy_mode', 'production');
 desc('Set Magento deploy mode');
@@ -133,11 +136,12 @@ task('magento:db-dump', function () {
 desc('Pull Magento database to local');
 task('magento:db-pull', function () {
     $fileName = uniqid('dbdump_');
+    $stripTables = implode(' ', get('db_pull_strip_tables'));
     $remoteDump = "/tmp/{$fileName}.sql.gz";
 
     write('Dumping..');
 
-    run('cd {{current_path}} && n98-magerun2.phar db:dump -n -c gz ' . $remoteDump);
+    run('cd {{current_path}} && n98-magerun2.phar db:dump -n --strip="'. $stripTables .'"  -c gz ' . $remoteDump);
 
     write('done' . PHP_EOL);
     write('Downloading..');
