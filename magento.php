@@ -144,11 +144,13 @@ task('magento:db-pull', function () {
 
     $localDump =  tempnam(sys_get_temp_dir(), 'deployer_') . '.sql.gz';
     download($remoteDump, $localDump);
+    run('rm ' . $remoteDump);
 
     write('done' . PHP_EOL);
     write('Importing..');
 
     runLocally('n98-magerun2.phar db:import -n --drop-tables -c gz ' . $localDump);
+    runLocally('rm ' . $localDump);
     runLocally('n98-magerun2.phar cache:disable layout block_html full_page');
 
     write('done' . PHP_EOL);
