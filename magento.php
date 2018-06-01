@@ -137,7 +137,7 @@ task('magento:db-pull', function () {
     run('cd {{current_path}} && n98-magerun2.phar db:dump -n -c gz ' . $remoteDump);
     $localDump =  tempnam(sys_get_temp_dir(), 'deployer_') . '.sql.gz';
     download($remoteDump, $localDump);
-    runLocally('n98-magerun2.phar db:import -n -c gz ' . $localDump);
+    runLocally('n98-magerun2.phar db:import -n --drop-tables -c gz ' . $localDump);
     runLocally('n98-magerun2.phar cache:disable layout block_html full_page');
 });
 
