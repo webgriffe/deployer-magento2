@@ -7,132 +7,109 @@ use Symfony\Component\Console\Input\InputOption;
 
 // TODO Add deployer version check (now it works only with Deployer >= 5.0)
 
-require 'recipe/magento2.php';
+require 'recipe/common.php';
 
-// Rewriting shared_dirs of parent recipe to make the make var/log, var/report and var/session shared, too
+// Configuration
+set('shared_files', [
+    'app/etc/env.php',
+    'var/.maintenance.ip',
+]);
 set('shared_dirs', [
     'var/log',
     'var/report',
     'var/session',
-    'var/backup',
+    'var/backups',
     'pub/media',
 ]);
+set('writable_dirs', [
+    'var',
+    'pub/static',
+    'pub/media',
+]);
+set('clear_paths', [
+    'CHANGELOG.md',
+    'COPYING.txt',
+    'LICENSE.txt',
+    'LICENSE_AFL.txt',
+    'LICENSE_EE.txt',
+    'README_EE.md',
+]);
+set('db_pull_strip_tables', ['@stripped']);
+set('deploy_mode', 'production');
+set('modules_to_disable', []);
+set('media_pull_exclude_dirs', []); // Magento media pull exclude dirs (paths must be relative to the media dir)
+set('magerun_remote', 'n98-magerun2.phar');
+set('magerun_local', getenv('DEPLOYER_MAGERUN_LOCAL') ?: 'n98-magerun2.phar');
 
-// DB pull strip tables
-set('db_pull_strip_tables', []);
+function is_magento_installed() {
+    return test('[ -f {{release_path}}/app/etc/env.php ]') &&
+        run('cat {{release_path}}/app/etc/env.php | grep "\'date\'"; true');
+}
 
 // Tasks
-set('deploy_mode', 'production');
-desc('Set Magento deploy mode');
-task('magento:mode:set', function () {
-    run('{{bin/php}} {{release_path}}/bin/magento deploy:mode:set -s {{deploy_mode}}');
+desc('Enable all modules');
+task('magento:module:enable', function () {
+    if (is_magento_installed()) {
+        run("{{bin/php}} {{release_path}}/bin/magento module:enable --all");
+    }
 });
-
+desc('Compile magento di');
+task('magento:compile', function () {
+    if (is_magento_installed()) {
+        run("{{bin/php}} {{release_path}}/bin/magento setup:di:compile");
+        run('cd {{release_path}} && {{bin/composer}} dump-autoload -o');
+    }
+});
 desc('Deploy assets');
 task('magento:deploy:assets', function () {
-    if (get('deploy_mode') === 'production') {
+    if (is_magento_installed()) {
+        run("{{bin/php}} {{release_path}}/bin/magento setup:static-content:deploy");
+    }
+});
+desc('Enable maintenance mode');
+task('magento:maintenance:enable', function () {
+    run("if [ -d $(echo {{current_path}}) ]; then {{bin/php}} {{current_path}}/bin/magento maintenance:enable; fi");
+});
+desc('Disable maintenance mode');
+task('magento:maintenance:disable', function () {
+    run("if [ -d $(echo {{current_path}}) ]; then {{bin/php}} {{current_path}}/bin/magento maintenance:disable; fi");
+});
+desc('Upgrade magento database');
+task('magento:upgrade:db', function () {
+    if (is_magento_installed()) {
+        run("{{bin/php}} {{release_path}}/bin/magento setup:upgrade --keep-generated");
+    }
+});
+desc('Flush Magento Cache');
+task('magento:cache:flush', function () {
+    if (is_magento_installed()) {
+        run("{{bin/php}} {{release_path}}/bin/magento cache:flush");
+    }
+});
+desc('Set Magento deploy mode');
+task('magento:mode:set', function () {
+    run("if [ -d $(echo {{current_path}}) ]; then {{bin/php}} {{current_path}}/bin/magento deploy:mode:set -s {{deploy_mode}}; fi");
+});
+desc('Deploy assets');
+task('magento:deploy:assets', function () {
+    if (is_magento_installed()) {
         run('{{bin/php}} {{release_path}}/bin/magento setup:static-content:deploy {{assets_locales}}');
     }
 });
-
-desc('Clear OPCache cache');
-task('deploy:resetOPCache', function() {
-    $resetScriptFilename = "resetOPCache.php";
-    $moveToReleaseFolder = "cd {{release_path}}";
-    $resetScriptContent = '<?php echo opcache_reset() ? "Successfully reset opcache" : "Something went wrong trying to reset opcache"; ?>';
-    $createResetScript = "echo '$resetScriptContent' > $resetScriptFilename";
-    $executeResetScript= "curl -k {{base_url}}/$resetScriptFilename";
-    $removeResetScript = "rm $resetScriptFilename";
-
-    run("$moveToReleaseFolder && $createResetScript && $executeResetScript && $removeResetScript");
+desc('Disable modules');
+task('magento:module:disable', function () {
+    if (is_magento_installed()) {
+        $modulesToDisable = get('modules_to_disable');
+        if (empty($modulesToDisable)) {
+            return;
+        }
+        run('{{bin/php}} {{release_path}}/bin/magento module:disable ' . implode(' ', $modulesToDisable));
+    }
 });
-
-desc('Magento2 deployment operations');
-task('deploy:magento', [
-    'magento:enable',
-    'magento:module:disable',
-    'magento:mode:set',
-    'magento:compile',
-    'magento:upgrade:db',
-    'magento:deploy:assets',
-    'magento:cache:flush',
-]);
-
-desc('Magento2 deployment operations');
-task('deploy:magento-maintenance', [
-    'magento:enable',
-    'magento:module:disable',
-    'magento:mode:set',
-    'magento:compile',
-    'magento:maintenance:enable',
-    'magento:upgrade:db',
-    'magento:deploy:assets',
-    'magento:cache:flush',
-    'magento:maintenance:disable'
-]);
-
-desc('Deploy your project');
-task('deploy', [
-    'deploy:prepare',
-    'deploy:lock',
-    'deploy:release',
-    'deploy:update_code',
-    'deploy:shared',
-    'deploy:writable',
-    'deploy:vendors',
-    'deploy:clear_paths',
-    'deploy:magento',
-    'deploy:symlink',
-    'deploy:unlock',
-    'deploy:resetOPCache',
-    'cleanup',
-    'success'
-]);
-
-desc('Deploy your project with maintenance');
-task('deploy:maintenance', [
-    'deploy:prepare',
-    'deploy:lock',
-    'deploy:release',
-    'deploy:update_code',
-    'deploy:shared',
-    'deploy:writable',
-    'deploy:vendors',
-    'deploy:clear_paths',
-    'deploy:magento-maintenance',
-    'deploy:symlink',
-    'deploy:unlock',
-    'deploy:resetOPCache',
-    'cleanup',
-    'success'
-]);
-
-desc('Deploy your project');
-task('deploy-first', [
-    'deploy:prepare',
-    'deploy:lock',
-    'deploy:release',
-    'deploy:update_code',
-    'deploy:shared',
-    'deploy:writable',
-    'deploy:vendors',
-    'deploy:clear_paths',
-    'deploy:symlink',
-    'deploy:unlock',
-    'cleanup',
-    'success'
-]);
-
-// [Optional] if deploy fails automatically unlock.
-after('deploy:failed', 'deploy:unlock');
-
-
-
 desc('Create Magento database dump');
 task('magento:db-dump', function () {
-    run('cd {{current_path}} && n98-magerun2.phar db:dump -n -c gz ~');
+    run('cd {{current_path}} && {{magerun_remote}} db:dump -n -c gz ~');
 });
-
 desc('Pull Magento database to local');
 task('magento:db-pull', function () {
     $fileName = uniqid('dbdump_');
@@ -141,7 +118,7 @@ task('magento:db-pull', function () {
 
     write('Dumping..');
 
-    run('cd {{current_path}} && n98-magerun2.phar db:dump -n --strip="'. $stripTables .'"  -c gz ' . $remoteDump);
+    run('cd {{current_path}} && {{magerun_remote}} db:dump -n --strip="'. $stripTables .'"  -c gz ' . $remoteDump);
 
     write('done' . PHP_EOL);
     write('Downloading..');
@@ -153,16 +130,12 @@ task('magento:db-pull', function () {
     write('done' . PHP_EOL);
     write('Importing..');
 
-    runLocally('n98-magerun2.phar db:import -n --drop-tables -c gz ' . $localDump);
+    runLocally('{{magerun_local}} db:import -n --drop-tables -c gz ' . $localDump);
     runLocally('rm ' . $localDump);
-    runLocally('n98-magerun2.phar cache:disable layout block_html full_page');
+    runLocally('{{magerun_local}} cache:disable layout block_html full_page');
 
     write('done' . PHP_EOL);
 });
-
-// Magento media pull exclude dirs (paths must be relative to the media dir)
-set('media_pull_exclude_dirs', []);
-
 option(
     'media-pull-timeout',
     null,
@@ -190,12 +163,32 @@ task('magento:media-pull', function () {
     download($remotePath, $localPath, $config);
 });
 
-set('modules_to_disable', []);
-desc('Disable modules');
-task('magento:module:disable', function () {
-    $modulesToDisable = get('modules_to_disable');
-    if (empty($modulesToDisable)) {
-        return;
-    }
-    run('{{bin/php}} {{release_path}}/bin/magento module:disable ' . implode(' ', $modulesToDisable));
-});
+desc('Deploy your project');
+task('deploy', [
+    'deploy:info',
+    'deploy:prepare',
+    'deploy:lock',
+    'deploy:release',
+    'deploy:update_code',
+    'deploy:shared',
+    'deploy:writable',
+    'deploy:vendors',
+    'deploy:clear_paths',
+    'magento:mode:set',
+    'magento:module:enable',
+    'magento:module:disable',
+    'magento:upgrade:db',
+    'magento:compile',
+    'magento:deploy:assets',
+    'magento:cache:flush',
+    'deploy:symlink',
+    'deploy:unlock',
+    'cleanup',
+    'success'
+]);
+
+
+
+
+
+
