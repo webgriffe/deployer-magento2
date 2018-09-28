@@ -88,7 +88,9 @@ task('magento:cache:flush', function () {
 });
 desc('Set Magento deploy mode');
 task('magento:mode:set', function () {
-    run("if [ -d $(echo {{current_path}}) ]; then {{bin/php}} {{current_path}}/bin/magento deploy:mode:set -s {{deploy_mode}}; fi");
+    if (is_magento_installed()) {
+        run("if [ -d $(echo {{current_path}}) ]; then {{bin/php}} {{current_path}}/bin/magento deploy:mode:set -s {{deploy_mode}}; fi");
+    }
 });
 desc('Deploy assets');
 task('magento:deploy:assets', function () {
