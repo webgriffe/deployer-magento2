@@ -7,6 +7,8 @@ use Symfony\Component\Console\Input\InputOption;
 
 // TODO Add deployer version check (now it works only with Deployer >= 5.0)
 
+const DEPLOY_ASSETS_TIMEOUT_OPTION_NAME = 'deploy-assets-timeout';
+
 require 'recipe/common.php';
 
 // Configuration
@@ -92,11 +94,25 @@ task('magento:mode:set', function () {
         run("if [ -d $(echo {{current_path}}) ]; then {{bin/php}} {{current_path}}/bin/magento deploy:mode:set -s {{deploy_mode}}; fi");
     }
 });
+option(
+    DEPLOY_ASSETS_TIMEOUT_OPTION_NAME,
+    null,
+    InputOption::VALUE_OPTIONAL,
+    'Timeout for static-content:deploy task in seconds (default is 300s)'
+);
 desc('Deploy assets');
 task('magento:deploy:assets', function () {
-    if (is_magento_installed()) {
-        run('{{bin/php}} {{release_path}}/bin/magento setup:static-content:deploy {{assets_locales}}');
+    if (!is_magento_installed()) {
+        return;
     }
+    $timeout = 300;
+    if (input()->hasOption(DEPLOY_ASSETS_TIMEOUT_OPTION_NAME)) {
+        $timeout = input()->getOption(DEPLOY_ASSETS_TIMEOUT_OPTION_NAME);
+    }
+    run(
+        '{{bin/php}} {{release_path}}/bin/magento setup:static-content:deploy {{assets_locales}}',
+        ['timeout' => $timeout]
+    );
 });
 desc('Disable modules');
 task('magento:module:disable', function () {
