@@ -150,7 +150,6 @@ task('magento:db-pull', function () {
 
     runLocally('{{magerun_local}} db:import -n --drop-tables -c gz ' . $localDump);
     runLocally('rm ' . $localDump);
-    runLocally('{{magerun_local}} cache:disable layout block_html full_page');
 
     write('done' . PHP_EOL);
 });
