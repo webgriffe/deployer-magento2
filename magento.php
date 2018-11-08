@@ -38,7 +38,6 @@ set('clear_paths', [
 ]);
 set('db_pull_strip_tables', ['@stripped']);
 set('deploy_mode', 'production');
-set('modules_to_disable', []);
 set('media_pull_exclude_dirs', []); // Magento media pull exclude dirs (paths must be relative to the media dir)
 set('magerun_remote', 'n98-magerun2.phar');
 set('magerun_local', getenv('DEPLOYER_MAGERUN_LOCAL') ?: 'n98-magerun2.phar');
@@ -49,12 +48,6 @@ function is_magento_installed() {
 }
 
 // Tasks
-desc('Enable all modules');
-task('magento:module:enable', function () {
-    if (is_magento_installed()) {
-        run("{{bin/php}} {{release_path}}/bin/magento module:enable --all");
-    }
-});
 desc('Compile magento di');
 task('magento:compile', function () {
     if (is_magento_installed()) {
@@ -113,16 +106,6 @@ task('magento:deploy:assets', function () {
         '{{bin/php}} {{release_path}}/bin/magento setup:static-content:deploy {{assets_locales}}',
         ['timeout' => $timeout]
     );
-});
-desc('Disable modules');
-task('magento:module:disable', function () {
-    if (is_magento_installed()) {
-        $modulesToDisable = get('modules_to_disable');
-        if (empty($modulesToDisable)) {
-            return;
-        }
-        run('{{bin/php}} {{release_path}}/bin/magento module:disable ' . implode(' ', $modulesToDisable));
-    }
 });
 desc('Create Magento database dump');
 task('magento:db-dump', function () {
@@ -192,8 +175,6 @@ task('deploy', [
     'deploy:vendors',
     'deploy:clear_paths',
     'magento:mode:set',
-    'magento:module:enable',
-    'magento:module:disable',
     'magento:upgrade:db',
     'magento:compile',
     'magento:deploy:assets',
