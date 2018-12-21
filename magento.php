@@ -41,6 +41,7 @@ set('deploy_mode', 'production');
 set('media_pull_exclude_dirs', []); // Magento media pull exclude dirs (paths must be relative to the media dir)
 set('magerun_remote', 'n98-magerun2.phar');
 set('magerun_local', getenv('DEPLOYER_MAGERUN_LOCAL') ?: 'n98-magerun2.phar');
+set('local_magento_path', getcwd());
 
 function is_magento_installed() {
     return test('[ -f {{release_path}}/app/etc/env.php ]') &&
@@ -117,24 +118,29 @@ task('magento:db-pull', function () {
     $stripTables = implode(' ', get('db_pull_strip_tables'));
     $remoteDump = "/tmp/{$fileName}.sql.gz";
 
-    write('Dumping..');
+    write('➤ Dumping... ');
 
     run('cd {{current_path}} && {{magerun_remote}} db:dump -n --strip="'. $stripTables .'"  -c gz ' . $remoteDump);
 
-    write('done' . PHP_EOL);
-    write('Downloading..');
+    write('Done!' . PHP_EOL);
+    write('➤ Downloading... ');
 
     $localDump =  tempnam(sys_get_temp_dir(), 'deployer_') . '.sql.gz';
     download($remoteDump, $localDump);
     run('rm ' . $remoteDump);
 
-    write('done' . PHP_EOL);
-    write('Importing..');
+    write('Done!' . PHP_EOL);
+    write('➤ Importing... ');
 
-    runLocally('{{magerun_local}} db:import -n --drop-tables -c gz ' . $localDump);
+    runLocally('cd {{local_magento_path}} && {{magerun_local}} db:import -n --drop-tables -c gz ' . $localDump);
     runLocally('rm ' . $localDump);
 
-    write('done' . PHP_EOL);
+    write('Done!' . PHP_EOL);
+    write('➤ Running setup:upgrade...');
+
+    runLocally('cd {{local_magento_path}} && {{magerun_local}} setup:upgrade');
+
+    write('Done!' . PHP_EOL);
 });
 option(
     'media-pull-timeout',
