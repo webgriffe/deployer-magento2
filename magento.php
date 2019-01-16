@@ -42,6 +42,7 @@ set('media_pull_exclude_dirs', []); // Magento media pull exclude dirs (paths mu
 set('magerun_remote', 'n98-magerun2.phar');
 set('magerun_local', getenv('DEPLOYER_MAGERUN_LOCAL') ?: 'n98-magerun2.phar');
 set('local_magento_path', getcwd());
+set('assets_locales', []);
 
 function is_magento_installed() {
     return test('[ -f {{release_path}}/app/etc/env.php ]') &&
@@ -54,12 +55,6 @@ task('magento:compile', function () {
     if (is_magento_installed()) {
         run("{{bin/php}} {{release_path}}/bin/magento setup:di:compile");
         run('cd {{release_path}} && {{bin/composer}} dump-autoload -o');
-    }
-});
-desc('Deploy assets');
-task('magento:deploy:assets', function () {
-    if (is_magento_installed()) {
-        run("{{bin/php}} {{release_path}}/bin/magento setup:static-content:deploy");
     }
 });
 desc('Enable maintenance mode');
@@ -103,8 +98,18 @@ task('magento:deploy:assets', function () {
     if (input()->hasOption(DEPLOY_ASSETS_TIMEOUT_OPTION_NAME)) {
         $timeout = input()->getOption(DEPLOY_ASSETS_TIMEOUT_OPTION_NAME);
     }
+    $locales = implode(' ', get('assets_locales'));
+    $themes = implode(
+        ' ',
+        array_map(
+            function ($theme) {
+                return '--theme=' . $theme;
+            },
+            get('assets_themes')
+        )
+    );
     run(
-        '{{bin/php}} {{release_path}}/bin/magento setup:static-content:deploy {{assets_locales}}',
+        "{{bin/php}} {{release_path}}/bin/magento setup:static-content:deploy $themes $locales",
         ['timeout' => $timeout]
     );
 });
