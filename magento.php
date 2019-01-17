@@ -156,7 +156,8 @@ option(
 desc('Pull Magento media to local');
 task('magento:media-pull', function () {
     $remotePath = '{{current_path}}/pub/media/';
-    $localPath = 'pub/media/';
+    $localPath = rtrim(get('local_magento_path'), '/');
+    $localPath = $localPath . '/pub/media/';
 
     $excludeDirs = array_map(function($dir) {
         return '--exclude '.$dir;
