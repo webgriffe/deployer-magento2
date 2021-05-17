@@ -65,10 +65,14 @@ desc('Disable maintenance mode');
 task('magento:maintenance:disable', function () {
     run("if [ -d $(echo {{current_path}}) ]; then {{bin/php}} {{current_path}}/bin/magento maintenance:disable; fi");
 });
-desc('Upgrade magento database');
+desc('If necessary enable maintenance page and upgrade magento database');
 task('magento:upgrade:db', function () {
-    if (is_magento_installed()) {
-        run("{{bin/php}} {{release_path}}/bin/magento setup:upgrade --keep-generated");
+    if (is_magento_installed() && test('! {{bin/php}} {{release_path}}/bin/magento setup:db:status -q')) {
+        run(
+            'if [ -d $(echo {{current_path}}) ]; then ' .
+            '{{bin/php}} {{current_path}}/bin/magento maintenance:enable; fi'
+        );
+        run('{{bin/php}} {{release_path}}/bin/magento setup:upgrade --keep-generated');
     }
 });
 desc('Flush Magento Cache');
